@@ -113,6 +113,27 @@ details[open] summary::after{content:"－"}
 .btn-ghost.sm{margin:0;padding:5px 10px;font-size:.8rem}
 .diff{font-size:.75rem;display:block}
 .ytable tr.partial td{color:var(--muted)}
+.rev-head{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+select{font:600 .82rem var(--f-ui);color:var(--fg);background:var(--sunk);border:1px solid var(--line);border-radius:8px;padding:5px 8px}
+.lab-total{text-align:right}
+.lab-total b{display:block;font:700 1.15rem var(--f-num)}
+.staff-list{display:grid;gap:10px;margin-top:14px}
+.staff{border:1px solid var(--line);border-left:4px solid var(--fixed);border-radius:10px;padding:12px;display:grid;gap:10px;background:var(--surface)}
+.staff.off{border-left-color:var(--line);opacity:.75}
+.staff-top{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.staff-top input.name{flex:1;min-width:120px;font:700 .95rem var(--f-ui);color:var(--fg);background:transparent;border:0;border-bottom:1px dashed var(--line);padding:3px 0}
+.staff-top .cost{font:700 .95rem var(--f-num);white-space:nowrap}
+.staff-top .del{border:0;background:transparent;color:var(--loss);font:600 .8rem var(--f-ui);cursor:pointer;padding:4px 6px}
+.staff-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px}
+.staff-fields .fld input{text-align:right}
+.fld .box{min-width:0}
+.fld input{width:100%}
+.staff-fields select{width:100%}
+.add-row{margin-top:12px}
+.staff-tl{min-width:640px;font-size:.8rem}
+.staff-tl td,.staff-tl th{padding:4px 6px}
+.staff-tl .on{background:color-mix(in srgb,var(--fixed) 22%,transparent);color:var(--fg)}
+.staff-tl .offc{color:var(--line)}
 /* Year */
 .ywrap{overflow-x:auto}
 .ytable{width:100%;min-width:560px;border-collapse:collapse;font-size:.9rem}
@@ -156,7 +177,8 @@ details[open] summary::after{content:"－"}
     <div class="panel">
       <div class="calc">
         <div>
-          <div class="label"><label for="rev">Doanh thu tháng</label></div>
+          <div class="rev-head"><div class="label"><label for="rev">Doanh thu tháng</label></div>
+            <select id="mon" aria-label="Tính cho tháng"></select></div>
           <div class="rev-field"><input id="rev" inputmode="numeric" autocomplete="off" value="35.000.000"><span>đ</span></div>
           <div class="chips" id="chips"></div>
           <p class="hint">Gõ số tiền đầy đủ, hoặc gõ tắt như <b>45tr</b> hay <b>45m</b>.</p>
@@ -179,7 +201,7 @@ details[open] summary::after{content:"－"}
     <div class="panel">
       <div class="label" style="margin-bottom:4px">Chi tiết chi phí tháng</div>
       <table class="ledger" id="ledger"></table>
-      <p class="removed">Đã bỏ so với bảng kế hoạch gốc: ca sáng, ca tối, hoa quả thắp hương, chi phí marketing. Tiền thuê 14tr đã đổi thành 10tr.</p>
+      <p class="removed">So với bảng kế hoạch gốc: đã bỏ hoa quả thắp hương và chi phí marketing, tiền thuê đổi từ 14tr thành 10tr. Ca làm và nhân viên chỉnh ở mục "Nhân sự & ca làm theo giai đoạn".</p>
     </div>
   </section>
 
@@ -203,7 +225,7 @@ details[open] summary::after{content:"－"}
       <div class="label">Đăng nhập tài khoản báo cáo</div>
       <p class="hint" style="margin-top:4px">Dùng tài khoản báo cáo của laundrylnd.com để lấy doanh thu thật từ Uviwash. Số liệu chỉ hiện trên máy của anh sau khi đăng nhập.</p>
       <form id="real-form" class="login">
-        <div class="fld"><label for="r-user">Tài khoản</label><div class="box"><input id="r-user" autocomplete="username" style="text-align:left" value="baocaolnd"></div></div>
+        <div class="fld"><label for="r-user">Tài khoản</label><div class="box"><input id="r-user" autocomplete="username" style="text-align:left"></div></div>
         <div class="fld"><label for="r-pass">Mật khẩu</label><div class="box"><input id="r-pass" type="password" autocomplete="current-password" style="text-align:left"></div></div>
         <button class="btn-main" type="submit" id="r-go">Lấy doanh thu thực tế</button>
       </form>
@@ -221,6 +243,25 @@ details[open] summary::after{content:"－"}
     </div>
   </section>
 
+  <!-- STAFF -->
+  <div class="panel" id="staff-panel">
+    <div class="real-top">
+      <div>
+        <div class="label">Nhân sự & ca làm theo giai đoạn</div>
+        <p class="hint" style="margin-top:2px">Mỗi dòng là một ca hoặc một nhân viên, chỉ tính lương trong khoảng tháng anh chọn.</p>
+      </div>
+      <div class="lab-total"><span class="label" id="lab-mon-l">Lương tháng này</span><b class="num" id="lab-mon">0 đ</b></div>
+    </div>
+    <div id="staff-list" class="staff-list"></div>
+    <div class="chips add-row">
+      <button type="button" data-add="sang">+ Ca sáng</button>
+      <button type="button" data-add="chieu">+ Ca chiều</button>
+      <button type="button" data-add="toi">+ Ca tối</button>
+      <button type="button" data-add="thang">+ Nhân viên lương tháng</button>
+    </div>
+    <div class="ywrap" style="margin-top:14px"><table class="ytable staff-tl" id="staff-tl"></table></div>
+  </div>
+
   <!-- ASSUMPTIONS -->
   <details class="panel" id="assump">
     <summary>Giả định chi phí (bấm để chỉnh)</summary>
@@ -233,7 +274,6 @@ details[open] summary::after{content:"－"}
 (function(){
 const DEF = {
   rent:10000000,
-  days:30, hours:5, wage:25000,
   elec:5, water:1,
   det:5, soft:2, bleach:2, nylon:1, bag:1,
   paper:100000, net:200000, trash:50000
@@ -249,12 +289,27 @@ const store = {
   set(k,v){try{localStorage.setItem('gk-ln-'+k,JSON.stringify(v))}catch(_){}}
 };
 let A = Object.assign({},DEF,store.get('assump',{}));
+const SHIFT = {sang:['Ca sáng',5], chieu:['Ca chiều',5], toi:['Ca tối',5]};
+const DEF_STAFF = [{name:'Ca chiều', type:'gio', hours:5, days:30, wage:25000, salary:0, from:9, to:8}];
+let STAFF = store.get('staff', null);
+if(!Array.isArray(STAFF)){ // chuyển từ giả định cũ (1 ca chiều)
+  const old=store.get('assump',{});
+  STAFF = [{name:'Ca chiều', type:'gio', hours:old.hours||5, days:old.days||30, wage:old.wage||25000, salary:0, from:9, to:8}];
+}
+['days','hours','wage'].forEach(k=>delete A[k]);
+function inPeriod(st,m){ const i=PLAN_MONTHS.indexOf(m), f=PLAN_MONTHS.indexOf(st.from), t=PLAN_MONTHS.indexOf(st.to);
+  if(i<0||f<0||t<0) return true; return f<=t ? (i>=f&&i<=t) : (i>=f||i<=t); }
+function staffCost(st){ return st.type==='thang' ? (+st.salary||0) : (+st.hours||0)*(+st.days||0)*(+st.wage||0); }
+function laborFor(m){ return STAFF.filter(st=>inPeriod(st,m)).map(st=>({st,cost:staffCost(st)})); }
+const nowM = new Date().getMonth()+1;
+let mon = store.get('mon', nowM);
 let rev = store.get('rev',35e6);
 let yrev = store.get('yrev',PLAN_REV.slice());
 if(!Array.isArray(yrev)||yrev.length!==12) yrev = PLAN_REV.slice();
 
 const $ = s=>document.querySelector(s);
 const fmt = n => Math.round(n).toLocaleString('vi-VN');
+const esc = t => String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const vnd = n => (n<0?'−':'')+fmt(Math.abs(n))+' đ';
 const short = n => { const a=Math.abs(n), s=n<0?'−':''; if(a>=1e9) return s+(a/1e9).toLocaleString('vi-VN',{maximumFractionDigits:2})+' tỷ'; if(a>=1e6) return s+(a/1e6).toLocaleString('vi-VN',{maximumFractionDigits:1})+'tr'; return s+fmt(a)+'đ'; };
 function parseMoney(str){
@@ -266,8 +321,9 @@ function parseMoney(str){
 }
 
 // Core calculation — same structure as the planning sheet
-function calc(R){
-  const labor = A.days*A.hours*A.wage;
+function calc(R,m){
+  const staff = laborFor(m==null?mon:m);
+  const labor = staff.reduce((s,x)=>s+x.cost,0);
   const elec = R*A.elec/100, water = R*A.water/100;
   const mats = [['Nước giặt',A.det],['Nước xả',A.soft],['Nước tẩy',A.bleach],['Nilon & móc áo',A.nylon],['Túi giấy',A.bag]].map(([n,p])=>[n,p,R*p/100]);
   const office = [['Giấy in, giấy lụa, ghim, đạn nhựa',A.paper],['Internet',A.net],['Vệ sinh môi trường, đổ rác',A.trash]];
@@ -276,7 +332,7 @@ function calc(R){
   const varPct = A.elec+A.water+A.det+A.soft+A.bleach+A.nylon+A.bag;
   const variable = R*varPct/100;
   const cost = fixed + variable;
-  return {R,labor,elec,water,mats,office,matT,offT,fixed,varPct,variable,cost,profit:R-cost,
+  return {R,labor,staff,elec,water,mats,office,matT,offT,fixed,varPct,variable,cost,profit:R-cost,
     be: varPct<100 ? fixed/(1-varPct/100) : Infinity};
 }
 
@@ -314,7 +370,9 @@ function renderMonth(){
   let h='';
   h+=row('Doanh thu',vnd(c.R),'grp');
   h+=row('1. Thuê cửa hàng',vnd(A.rent),'grp','',);
-  h+=row(`2. Nhân công ca chiều<span class="note">${A.days} ngày × ${A.hours} giờ × ${fmt(A.wage)}đ</span>`,vnd(c.labor),'grp');
+  h+=row(`2. Nhân công<span class="note">${c.staff.length} ca/người trong tháng ${mon}</span>`,vnd(c.labor),'grp');
+  c.staff.forEach(({st,cost})=>h+=row(`${esc(st.name)||'Nhân viên'}<span class="note">${st.type==='thang'?'lương tháng':`${st.days} ngày × ${st.hours} giờ × ${fmt(st.wage)}đ`}</span>`,vnd(cost),'item'));
+  if(!c.staff.length) h+=row('Không có ca nào trong tháng này','0 đ','item');
   h+=row(`3. Điện nước`,vnd(c.elec+c.water),'grp');
   h+=row(`Điện (${A.elec}% DT)`,vnd(c.elec),'item');
   h+=row(`Nước (${A.water}% DT)`,vnd(c.water),'item');
@@ -345,7 +403,7 @@ $('#y-reset').addEventListener('click',()=>{yrev=PLAN_REV.slice(); store.set('yr
 function renderYearNums(){
   let R=0,C=0,P=0,loss=0,best=null;
   const ps=[];
-  PLAN_MONTHS.forEach((m,i)=>{const c=calc(yrev[i]); R+=c.R;C+=c.cost;P+=c.profit; ps.push(c.profit); if(c.profit<0)loss++;
+  PLAN_MONTHS.forEach((m,i)=>{const c=calc(yrev[i],m); R+=c.R;C+=c.cost;P+=c.profit; ps.push(c.profit); if(c.profit<0)loss++;
     if(!best||c.profit>best.p)best={m,p:c.profit};
     $('#yc'+i).textContent=fmt(c.cost); const pe=$('#yp'+i); pe.textContent=(c.profit<0?'−':'')+fmt(Math.abs(c.profit)); pe.className='num '+(c.profit>=0?'pos':'neg');});
   $('#yR').textContent=fmt(R); $('#yC').textContent=fmt(C);
@@ -378,11 +436,8 @@ function niceStep(range){const raw=range/4, p=Math.pow(10,Math.floor(Math.log10(
 
 /* ---------- Assumptions ---------- */
 const FIELDS=[
-  ['Mặt bằng & nhân công'],
+  ['Mặt bằng'],
   ['rent','Tiền thuê mặt bằng','đ/tháng',true],
-  ['days','Số ngày làm ca chiều','ngày/tháng'],
-  ['hours','Số giờ một ca','giờ'],
-  ['wage','Lương theo giờ','đ/giờ',true],
   ['Điện nước (% doanh thu)'],
   ['elec','Điện','%'],['water','Nước','%'],
   ['Nguyên vật liệu (% doanh thu)'],
@@ -398,7 +453,56 @@ $('#agrid').addEventListener('input',e=>{const el=e.target,k=el.dataset.k; if(!k
   A[k] = el.dataset.m==='1' ? parseMoney(el.value) : (parseFloat(el.value.replace(',','.'))||0);
   store.set('assump',A); renderMonth(); renderYearNums(); renderReal();});
 $('#agrid').addEventListener('focusout',e=>{const el=e.target,k=el.dataset.k; if(k&&el.dataset.m==='1') el.value=fmt(A[k]);});
-$('#a-reset').addEventListener('click',()=>{A=Object.assign({},DEF); store.set('assump',A); renderAssump(); renderMonth(); renderYearNums(); renderReal();});
+$('#a-reset').addEventListener('click',()=>{A=Object.assign({},DEF); store.set('assump',A); STAFF=JSON.parse(JSON.stringify(DEF_STAFF)); saveStaff(); renderStaff(); renderAssump(); renderMonth(); renderYearNums(); renderReal();});
+
+/* ---------- Staff ---------- */
+const monOpts = PLAN_MONTHS.map(m=>`<option value="${m}">Tháng ${m}${PLAN_NOTES[m]?' ('+PLAN_NOTES[m].toLowerCase()+')':''}</option>`).join('');
+const monSel=$('#mon'); monSel.innerHTML=monOpts; monSel.value=mon;
+monSel.addEventListener('change',()=>{ mon=+monSel.value; store.set('mon',mon); renderMonth(); renderStaffTotals(); });
+function saveStaff(){ store.set('staff',STAFF); }
+function renderStaff(){
+  $('#staff-list').innerHTML = STAFF.length ? STAFF.map((st,i)=>{
+    const g=st.type!=='thang';
+    return `<div class="staff" data-i="${i}">
+      <div class="staff-top"><input class="name" data-f="name" value="${esc(st.name)}" aria-label="Tên ca hoặc nhân viên" placeholder="Tên ca / nhân viên">
+        <span class="cost num" data-cost>${vnd(staffCost(st))}/tháng</span><button type="button" class="del" data-del>Xoá</button></div>
+      <div class="staff-fields">
+        <div class="fld"><label>Cách trả lương</label><select data-f="type"><option value="gio"${g?' selected':''}>Theo giờ</option><option value="thang"${g?'':' selected'}>Lương tháng</option></select></div>
+        ${g?`<div class="fld"><label>Giờ / ngày</label><div class="box"><input data-f="hours" inputmode="decimal" value="${st.hours}"></div></div>
+        <div class="fld"><label>Ngày / tháng</label><div class="box"><input data-f="days" inputmode="numeric" value="${st.days}"></div></div>
+        <div class="fld"><label>Lương / giờ</label><div class="box"><input data-f="wage" data-m="1" inputmode="numeric" value="${fmt(st.wage)}"><span class="u">đ</span></div></div>`
+        :`<div class="fld"><label>Lương tháng</label><div class="box"><input data-f="salary" data-m="1" inputmode="numeric" value="${fmt(st.salary)}"><span class="u">đ</span></div></div>`}
+        <div class="fld"><label>Từ tháng</label><select data-f="from">${PLAN_MONTHS.map(m=>`<option value="${m}"${m==st.from?' selected':''}>Tháng ${m}</option>`).join('')}</select></div>
+        <div class="fld"><label>Đến tháng</label><select data-f="to">${PLAN_MONTHS.map(m=>`<option value="${m}"${m==st.to?' selected':''}>Tháng ${m}</option>`).join('')}</select></div>
+      </div></div>`;}).join('') : '<p class="hint">Chưa có ca nào. Bấm nút bên dưới để thêm.</p>';
+  renderStaffTotals();
+}
+function renderStaffTotals(){
+  STAFF.forEach((st,i)=>{ const el=document.querySelector(`.staff[data-i="${i}"]`); if(!el)return;
+    el.classList.toggle('off',!inPeriod(st,mon)); el.querySelector('[data-cost]').textContent=vnd(staffCost(st))+'/tháng'; });
+  $('#lab-mon-l').textContent='Lương tháng '+mon;
+  $('#lab-mon').textContent=vnd(laborFor(mon).reduce((s,x)=>s+x.cost,0));
+  // timeline
+  let h='<thead><tr><th>Ca / nhân viên</th>'+PLAN_MONTHS.map(m=>`<th>T${m}</th>`).join('')+'</tr></thead><tbody>';
+  STAFF.forEach(st=>{ h+=`<tr><td>${esc(st.name)||'Nhân viên'}</td>`+PLAN_MONTHS.map(m=>inPeriod(st,m)?`<td class="on num">${short(staffCost(st))}</td>`:'<td class="offc">·</td>').join('')+'</tr>'; });
+  h+='</tbody><tfoot><tr><td>Tổng lương</td>'+PLAN_MONTHS.map(m=>`<td class="num">${short(laborFor(m).reduce((s,x)=>s+x.cost,0))}</td>`).join('')+'</tr></tfoot>';
+  $('#staff-tl').innerHTML = STAFF.length ? h : '';
+}
+function staffChanged(){ saveStaff(); renderStaffTotals(); renderMonth(); renderYearNums(); renderReal(); }
+$('#staff-list').addEventListener('input',e=>{ const el=e.target, card=el.closest('.staff'); if(!card||!el.dataset.f||el.tagName==='SELECT')return;
+  const st=STAFF[+card.dataset.i], f=el.dataset.f;
+  st[f] = f==='name' ? el.value : el.dataset.m==='1' ? parseMoney(el.value) : (parseFloat(el.value.replace(',','.'))||0);
+  staffChanged(); });
+$('#staff-list').addEventListener('change',e=>{ const el=e.target, card=el.closest('.staff'); if(!card||el.tagName!=='SELECT')return;
+  const st=STAFF[+card.dataset.i], f=el.dataset.f; st[f]= f==='type'?el.value:+el.value;
+  if(f==='type'){ if(st.type==='thang'&&!st.salary) st.salary=staffCost({...st,type:'gio'})||6000000; renderStaff(); }
+  staffChanged(); });
+$('#staff-list').addEventListener('focusout',e=>{ const el=e.target, card=el.closest('.staff'); if(!card||el.dataset.m!=='1')return; el.value=fmt(STAFF[+card.dataset.i][el.dataset.f]); });
+$('#staff-list').addEventListener('click',e=>{ const b=e.target.closest('[data-del]'); if(!b)return; STAFF.splice(+b.closest('.staff').dataset.i,1); renderStaff(); staffChanged(); });
+document.querySelector('.add-row').addEventListener('click',e=>{ const b=e.target.closest('[data-add]'); if(!b)return; const k=b.dataset.add;
+  STAFF.push(k==='thang' ? {name:'Nhân viên '+(STAFF.length+1), type:'thang', hours:8, days:26, wage:25000, salary:6000000, from:mon, to:8}
+    : {name:SHIFT[k][0], type:'gio', hours:SHIFT[k][1], days:30, wage:25000, salary:0, from:mon, to:8});
+  renderStaff(); staffChanged(); });
 
 /* ---------- Tabs ---------- */
 function show(t){ const y=t==='y'; $('#tab-m').setAttribute('aria-selected',!y); $('#tab-y').setAttribute('aria-selected',y);
@@ -446,7 +550,7 @@ function renderReal(){
   const ms=realMonths.slice(-12);
   let R=0,P=0,N=0,loss=0; const ps=[], labels=[];
   let h='<thead><tr><th>Tháng</th><th>Số đơn</th><th>Doanh thu thật</th><th>Kế hoạch</th><th>Chi phí ước tính</th><th>Lợi nhuận</th></tr></thead><tbody>';
-  ms.forEach(m=>{ const [yy,mm]=m.ym.split('-').map(Number); const c=calc(m.revenue);
+  ms.forEach(m=>{ const [yy,mm]=m.ym.split('-').map(Number); const c=calc(m.revenue,mm);
     const pi=PLAN_MONTHS.indexOf(mm), plan=pi>=0?yrev[pi]:0, d=m.revenue-plan, part=m.ym===curYm;
     R+=m.revenue; P+=c.profit; N+=m.orders; if(c.profit<0&&!part) loss++; ps.push(c.profit); labels.push('T'+mm);
     h+=`<tr class="${part?'partial':''}"><td class="mth">Tháng ${mm}/${yy}${part?'<small>Đang chạy, chưa hết tháng</small>':''}</td>
@@ -464,7 +568,7 @@ function renderReal(){
   $('#r-note').textContent=`Doanh thu tính theo ngày tạo đơn trên Uviwash, cập nhật ${realMeta.updated||''}. Chi phí dùng cùng giả định ở mục bên dưới; tháng đang chạy mới tính đến hôm nay nên lợi nhuận còn thấp. Máy chủ lưu đơn của 12 tháng gần nhất.`;
 }
 
-renderAssump(); renderMonth(); renderYearTable(); renderYearNums();
+renderAssump(); renderStaff(); renderMonth(); renderYearTable(); renderYearNums();
 show(location.hash==='#nam' ? 'y' : store.get('tab','m'));
 part(location.hash==='#thucte' ? 'real' : store.get('part','est'));
 })();
