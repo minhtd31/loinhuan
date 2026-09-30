@@ -31,7 +31,8 @@ html{color-scheme:light}
 @media (prefers-color-scheme: dark){html{color-scheme:dark}}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:15px;line-height:1.5;padding:24px 16px 48px}
 .app{max-width:880px;margin:0 auto;display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
-.app>*,.calc>*,section>*{min-width:0}
+.app>*,.calc>*,section>*,#est-wrap>*{min-width:0}
+#est-wrap,#view-real,#view-m{grid-template-columns:minmax(0,1fr)}
 .num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
 header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
 h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.01em;text-wrap:balance}
@@ -134,6 +135,16 @@ select{font:600 .82rem var(--f-ui);color:var(--fg);background:var(--sunk);border
 .staff-tl td,.staff-tl th{padding:4px 6px}
 .staff-tl .on{background:color-mix(in srgb,var(--fixed) 22%,transparent);color:var(--fg)}
 .staff-tl .offc{color:var(--line)}
+.save-row{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+.save-btns{display:flex;gap:8px;align-items:center}
+.save-btns .btn-main{padding:8px 16px}
+.save-st{font-size:.85rem;color:var(--muted);margin-top:2px}
+.save-st.dirty{color:var(--even);font-weight:600}
+.save-st.ok{color:var(--gain)}
+.savebar{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:10;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:center;
+  background:var(--fg);color:var(--bg);padding:10px 12px 10px 16px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);width:max-content;max-width:calc(100% - 32px);font-size:.88rem;font-weight:600}
+.savebar .btn-ghost.sm{color:var(--bg);border-color:color-mix(in srgb,var(--bg) 40%,transparent)}
+body{padding-bottom:96px}
 /* Year */
 .ywrap{overflow-x:auto}
 .ytable{width:100%;min-width:560px;border-collapse:collapse;font-size:.9rem}
@@ -208,6 +219,10 @@ select{font:600 .82rem var(--f-ui);color:var(--fg);background:var(--sunk);border
   <!-- YEAR VIEW -->
   <section id="view-y" hidden>
     <div class="panel">
+      <div class="save-row">
+        <div><div class="label">Kế hoạch cả năm</div><div class="save-st" id="save-st-y"></div></div>
+        <div class="save-btns"><button class="btn-ghost sm" type="button" data-revert>Hủy thay đổi</button><button class="btn-main" type="button" data-save>Lưu kế hoạch</button></div>
+      </div>
       <div class="ysum" id="ysum"></div>
       <div class="ywrap">
         <table class="ytable" id="ytable"></table>
@@ -270,6 +285,11 @@ select{font:600 .82rem var(--f-ui);color:var(--fg);background:var(--sunk);border
   </details>
 </div>
 
+<div class="savebar" id="savebar" hidden role="status">
+  <span>Có thay đổi chi phí / kế hoạch chưa lưu</span>
+  <div class="save-btns"><button class="btn-ghost sm" type="button" data-revert>Hủy</button><button class="btn-main" type="button" data-save>Lưu</button></div>
+</div>
+
 <script>
 (function(){
 const DEF = {
@@ -288,10 +308,11 @@ const store = {
   get(k,d){try{const v=localStorage.getItem('gk-ln-'+k);return v?JSON.parse(v):d}catch(_){return d}},
   set(k,v){try{localStorage.setItem('gk-ln-'+k,JSON.stringify(v))}catch(_){}}
 };
-let A = Object.assign({},DEF,store.get('assump',{}));
+const SAVED = store.get('plan', null);
+let A = Object.assign({},DEF, SAVED&&SAVED.A ? SAVED.A : store.get('assump',{}));
 const SHIFT = {sang:['Ca sáng',5], chieu:['Ca chiều',5], toi:['Ca tối',5]};
 const DEF_STAFF = [{name:'Ca chiều', type:'gio', hours:5, days:30, wage:25000, salary:0, from:9, to:8}];
-let STAFF = store.get('staff', null);
+let STAFF = SAVED&&Array.isArray(SAVED.STAFF) ? SAVED.STAFF : store.get('staff', null);
 if(!Array.isArray(STAFF)){ // chuyển từ giả định cũ (1 ca chiều)
   const old=store.get('assump',{});
   STAFF = [{name:'Ca chiều', type:'gio', hours:old.hours||5, days:old.days||30, wage:old.wage||25000, salary:0, from:9, to:8}];
@@ -304,7 +325,7 @@ function laborFor(m){ return STAFF.filter(st=>inPeriod(st,m)).map(st=>({st,cost:
 const nowM = new Date().getMonth()+1;
 let mon = store.get('mon', nowM);
 let rev = store.get('rev',35e6);
-let yrev = store.get('yrev',PLAN_REV.slice());
+let yrev = SAVED&&Array.isArray(SAVED.yrev) ? SAVED.yrev : store.get('yrev',PLAN_REV.slice());
 if(!Array.isArray(yrev)||yrev.length!==12) yrev = PLAN_REV.slice();
 
 const $ = s=>document.querySelector(s);
@@ -396,9 +417,9 @@ function renderYearTable(){
   h+='</tbody><tfoot><tr><td>Cả năm</td><td class="num" id="yR"></td><td class="num" id="yC"></td><td class="num" id="yP"></td></tr></tfoot>';
   $('#ytable').innerHTML=h;
 }
-$('#ytable').addEventListener('input',e=>{const el=e.target; if(el.dataset.i==null)return; yrev[+el.dataset.i]=parseMoney(el.value); store.set('yrev',yrev); renderYearNums();});
+$('#ytable').addEventListener('input',e=>{const el=e.target; if(el.dataset.i==null)return; yrev[+el.dataset.i]=parseMoney(el.value); markDirty(); renderYearNums();});
 $('#ytable').addEventListener('focusout',e=>{const el=e.target; if(el.dataset.i==null)return; el.value=fmt(yrev[+el.dataset.i]);});
-$('#y-reset').addEventListener('click',()=>{yrev=PLAN_REV.slice(); store.set('yrev',yrev); renderYearTable(); renderYearNums();});
+$('#y-reset').addEventListener('click',()=>{yrev=PLAN_REV.slice(); markDirty(); renderYearTable(); renderYearNums();});
 
 function renderYearNums(){
   let R=0,C=0,P=0,loss=0,best=null;
@@ -451,15 +472,15 @@ function renderAssump(){
 }
 $('#agrid').addEventListener('input',e=>{const el=e.target,k=el.dataset.k; if(!k)return;
   A[k] = el.dataset.m==='1' ? parseMoney(el.value) : (parseFloat(el.value.replace(',','.'))||0);
-  store.set('assump',A); renderMonth(); renderYearNums(); renderReal();});
+  markDirty(); renderMonth(); renderYearNums(); renderReal();});
 $('#agrid').addEventListener('focusout',e=>{const el=e.target,k=el.dataset.k; if(k&&el.dataset.m==='1') el.value=fmt(A[k]);});
-$('#a-reset').addEventListener('click',()=>{A=Object.assign({},DEF); store.set('assump',A); STAFF=JSON.parse(JSON.stringify(DEF_STAFF)); saveStaff(); renderStaff(); renderAssump(); renderMonth(); renderYearNums(); renderReal();});
+$('#a-reset').addEventListener('click',()=>{A=Object.assign({},DEF); STAFF=JSON.parse(JSON.stringify(DEF_STAFF)); markDirty(); renderStaff(); renderAssump(); renderMonth(); renderYearNums(); renderReal();});
 
 /* ---------- Staff ---------- */
 const monOpts = PLAN_MONTHS.map(m=>`<option value="${m}">Tháng ${m}${PLAN_NOTES[m]?' ('+PLAN_NOTES[m].toLowerCase()+')':''}</option>`).join('');
 const monSel=$('#mon'); monSel.innerHTML=monOpts; monSel.value=mon;
 monSel.addEventListener('change',()=>{ mon=+monSel.value; store.set('mon',mon); renderMonth(); renderStaffTotals(); });
-function saveStaff(){ store.set('staff',STAFF); }
+function saveStaff(){ markDirty(); }
 function renderStaff(){
   $('#staff-list').innerHTML = STAFF.length ? STAFF.map((st,i)=>{
     const g=st.type!=='thang';
@@ -503,6 +524,30 @@ document.querySelector('.add-row').addEventListener('click',e=>{ const b=e.targe
   STAFF.push(k==='thang' ? {name:'Nhân viên '+(STAFF.length+1), type:'thang', hours:8, days:26, wage:25000, salary:6000000, from:mon, to:8}
     : {name:SHIFT[k][0], type:'gio', hours:SHIFT[k][1], days:30, wage:25000, salary:0, from:mon, to:8});
   renderStaff(); staffChanged(); });
+
+/* ---------- Save plan ---------- */
+const snap = () => JSON.stringify({A, STAFF, yrev});
+let savedSnap = snap(), savedAt = SAVED&&SAVED.at ? SAVED.at : null;
+function stamp(t){ const d=new Date(t); return d.toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'})+' ngày '+d.toLocaleDateString('vi-VN'); }
+function markDirty(){ updateSaveUI(); }
+function isDirty(){ return snap()!==savedSnap; }
+function updateSaveUI(flash){
+  const d=isDirty(), st=$('#save-st-y');
+  $('#savebar').hidden=!d;
+  st.className='save-st '+(d?'dirty':flash?'ok':'');
+  st.textContent = d ? 'Có thay đổi chưa lưu. Bấm "Lưu kế hoạch" để giữ lại.' : flash ? 'Đã lưu lúc '+stamp(savedAt) : savedAt ? 'Đã lưu lần cuối lúc '+stamp(savedAt) : 'Đang dùng số mặc định theo bảng kế hoạch.';
+}
+function savePlan(){
+  savedAt=Date.now(); const data={A, STAFF, yrev, at:savedAt};
+  store.set('plan',data); store.set('assump',A); store.set('staff',STAFF); store.set('yrev',yrev);
+  savedSnap=snap(); updateSaveUI(true);
+}
+function revertPlan(){
+  const o=JSON.parse(savedSnap); A=Object.assign({},DEF,o.A); STAFF=o.STAFF; yrev=o.yrev;
+  renderAssump(); renderStaff(); renderYearTable(); renderYearNums(); renderMonth(); renderReal(); updateSaveUI();
+}
+document.addEventListener('click',e=>{ if(e.target.closest('[data-save]')) savePlan(); else if(e.target.closest('[data-revert]')) revertPlan(); });
+window.addEventListener('beforeunload',e=>{ if(isDirty()){ e.preventDefault(); e.returnValue=''; } });
 
 /* ---------- Tabs ---------- */
 function show(t){ const y=t==='y'; $('#tab-m').setAttribute('aria-selected',!y); $('#tab-y').setAttribute('aria-selected',y);
@@ -568,7 +613,7 @@ function renderReal(){
   $('#r-note').textContent=`Doanh thu tính theo ngày tạo đơn trên Uviwash, cập nhật ${realMeta.updated||''}. Chi phí dùng cùng giả định ở mục bên dưới; tháng đang chạy mới tính đến hôm nay nên lợi nhuận còn thấp. Máy chủ lưu đơn của 12 tháng gần nhất.`;
 }
 
-renderAssump(); renderStaff(); renderMonth(); renderYearTable(); renderYearNums();
+renderAssump(); renderStaff(); renderMonth(); renderYearTable(); renderYearNums(); updateSaveUI();
 show(location.hash==='#nam' ? 'y' : store.get('tab','m'));
 part(location.hash==='#thucte' ? 'real' : store.get('part','est'));
 })();
