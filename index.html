@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b84c6">
+<title>Lợi nhuận Giặt Ký</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: one working column — revenue input + verdict on top, cost ledger below; year view as a second tab */
+:root{
+  --bg:#eef5f9; --surface:#ffffff; --sunk:#e3eef5; --line:#cfdfe9;
+  --fg:#0f2a3a; --muted:#587386; --accent:#0b84c6; --accent-soft:#d6ecf8;
+  --fixed:#5b6f9c; --var:#29a8a0; --gain:#1f8a4c; --gain-soft:#dcf1e4; --loss:#c2413a; --loss-soft:#f8e0de; --even:#b7791f;
+  --f-ui:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,"SFMono-Regular",Consolas,monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1820; --surface:#12232e; --sunk:#0f1e28; --line:#23394a;
+  --fg:#e3eef5; --muted:#8fa9ba; --accent:#4bb5ef; --accent-soft:#143549;
+  --fixed:#8c9fd0; --var:#45c7be; --gain:#4cc57f; --gain-soft:#143324; --loss:#f07a72; --loss-soft:#3a1c1a; --even:#e0a84a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1820; --surface:#12232e; --sunk:#0f1e28; --line:#23394a;
+  --fg:#e3eef5; --muted:#8fa9ba; --accent:#4bb5ef; --accent-soft:#143549;
+  --fixed:#8c9fd0; --var:#45c7be; --gain:#4cc57f; --gain-soft:#143324; --loss:#f07a72; --loss-soft:#3a1c1a; --even:#e0a84a; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{color-scheme:light}
+@media (prefers-color-scheme: dark){html{color-scheme:dark}}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-ui);font-size:15px;line-height:1.5;padding:24px 16px 48px}
+.app{max-width:880px;margin:0 auto;display:grid;gap:20px;grid-template-columns:minmax(0,1fr)}
+.app>*,.calc>*,section>*{min-width:0}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+h1{margin:0;font-size:1.6rem;font-weight:800;letter-spacing:-.01em;text-wrap:balance}
+header p{margin:2px 0 0;color:var(--muted);font-size:.9rem}
+.tabs{display:flex;background:var(--sunk);border:1px solid var(--line);border-radius:999px;padding:3px}
+.tabs button{border:0;background:transparent;color:var(--muted);font:600 .88rem var(--f-ui);padding:7px 16px;border-radius:999px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.label{font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+
+/* Input + verdict */
+.calc{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media (max-width:680px){.calc{grid-template-columns:1fr}}
+.rev-field{display:flex;align-items:center;gap:8px;border:2px solid var(--accent);border-radius:12px;padding:10px 14px;background:var(--surface);margin-top:8px}
+.rev-field input{flex:1;min-width:0;width:100%;border:0;background:transparent;color:var(--fg);font:600 1.7rem var(--f-num);font-variant-numeric:tabular-nums;outline:none}
+.rev-field span{color:var(--muted);font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chips button{border:1px solid var(--line);background:var(--sunk);color:var(--fg);font:500 .82rem var(--f-num);padding:5px 10px;border-radius:999px;cursor:pointer}
+.chips button:hover{border-color:var(--accent);color:var(--accent)}
+.hint{color:var(--muted);font-size:.82rem;margin:10px 0 0}
+
+.verdict{border-radius:12px;padding:16px 18px;display:grid;gap:4px;align-content:start}
+.verdict.gain{background:var(--gain-soft)} .verdict.loss{background:var(--loss-soft)} .verdict.even{background:var(--accent-soft)}
+.pill{justify-self:start;font-size:.75rem;font-weight:700;padding:3px 10px;border-radius:999px;color:#fff}
+.gain .pill{background:var(--gain)} .loss .pill{background:var(--loss)} .even .pill{background:var(--even)}
+.profit{font:700 2.1rem var(--f-num);font-variant-numeric:tabular-nums;letter-spacing:-.02em;line-height:1.15;overflow-wrap:anywhere}
+.gain .profit{color:var(--gain)} .loss .profit{color:var(--loss)}
+.sub{color:var(--muted);font-size:.88rem}
+.sub b{color:var(--fg);font-weight:600}
+
+/* Split bar */
+.split{margin-top:18px}
+.bar{display:flex;height:14px;border-radius:7px;overflow:hidden;background:var(--sunk);margin-top:8px}
+.bar i{display:block;height:100%;transition:width .25s}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:.82rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+@media (prefers-reduced-motion:reduce){.bar i{transition:none}}
+
+/* Ledger */
+.ledger{width:100%;border-collapse:collapse;font-size:.92rem}
+.ledger td{padding:7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+.ledger td:last-child{text-align:right;white-space:nowrap;padding-left:12px}
+.ledger tr.grp td{font-weight:700;padding-top:14px}
+.ledger tr.item td:first-child{padding-left:16px;color:var(--muted)}
+.ledger tr.total td{font-weight:800;border-bottom:0;padding-top:12px;font-size:1rem}
+.ledger .note{font-size:.78rem;color:var(--muted);font-weight:400;margin-left:6px}
+.tag{display:inline-block;font-size:.68rem;font-weight:700;padding:1px 7px;border-radius:999px;margin-left:6px;vertical-align:1px}
+.tag.f{background:color-mix(in srgb,var(--fixed) 18%,transparent);color:var(--fixed)}
+.tag.v{background:color-mix(in srgb,var(--var) 18%,transparent);color:var(--var)}
+.removed{font-size:.82rem;color:var(--muted);margin:12px 0 0}
+
+/* Assumptions */
+details summary{cursor:pointer;font-weight:700;list-style:none;display:flex;justify-content:space-between;align-items:center;gap:8px}
+details summary::-webkit-details-marker{display:none}
+details summary::after{content:"＋";color:var(--muted);font-weight:400}
+details[open] summary::after{content:"－"}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px 16px;margin-top:16px}
+.fld{display:grid;gap:4px;min-width:0}
+.fld label{font-size:.82rem;color:var(--muted)}
+.fld .box{display:flex;align-items:center;border:1px solid var(--line);border-radius:9px;background:var(--sunk);padding:6px 10px;gap:6px}
+.fld input{flex:1;min-width:0;border:0;background:transparent;color:var(--fg);font:500 .95rem var(--f-num);outline:none;text-align:right}
+.fld .u{color:var(--muted);font-size:.8rem;white-space:nowrap}
+.sec-t{grid-column:1/-1;font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-top:6px}
+.btn-ghost{margin-top:16px;border:1px solid var(--line);background:transparent;color:var(--fg);font:600 .85rem var(--f-ui);padding:8px 14px;border-radius:9px;cursor:pointer}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+.subtabs{display:flex;gap:6px}
+.subtabs button{border:1px solid var(--line);background:transparent;color:var(--muted);font:600 .85rem var(--f-ui);padding:6px 14px;border-radius:9px;cursor:pointer}
+.subtabs button[aria-selected="true"]{background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.login{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px 16px;margin-top:14px;align-items:end}
+.btn-main{border:0;background:var(--accent);color:#fff;font:700 .92rem var(--f-ui);padding:11px 16px;border-radius:10px;cursor:pointer}
+.btn-main:disabled{opacity:.6;cursor:wait}
+.err{color:var(--loss);font-size:.88rem;margin:10px 0 0}
+.real-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+.real-actions{display:flex;gap:6px}
+.btn-ghost.sm{margin:0;padding:5px 10px;font-size:.8rem}
+.diff{font-size:.75rem;display:block}
+.ytable tr.partial td{color:var(--muted)}
+/* Year */
+.ywrap{overflow-x:auto}
+.ytable{width:100%;min-width:560px;border-collapse:collapse;font-size:.9rem}
+.ytable th{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);font-weight:700}
+.ytable th:first-child,.ytable td:first-child{text-align:left}
+.ytable td{padding:5px 8px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+.ytable input{width:120px;border:1px solid var(--line);background:var(--sunk);color:var(--fg);border-radius:7px;padding:5px 8px;font:500 .9rem var(--f-num);text-align:right}
+.ytable .mth{font-weight:600}
+.ytable .mth small{display:block;color:var(--muted);font-weight:400;font-size:.72rem}
+.ytable tfoot td{font-weight:800;border-bottom:0;padding-top:10px}
+.pos{color:var(--gain)} .neg{color:var(--loss)}
+.chart{margin-top:18px}
+.chart svg{width:100%;height:auto;display:block}
+.ysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.ysum div{background:var(--sunk);border-radius:10px;padding:12px 14px;min-width:0}
+.ysum b{display:block;font:700 1.15rem var(--f-num);font-variant-numeric:tabular-nums;margin-top:2px;overflow-wrap:anywhere}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <div>
+      <h1>Lợi nhuận Giặt Ký</h1>
+      <p>Ước tính lợi nhuận từ doanh thu tự nhập, hoặc xem lợi nhuận theo doanh thu thật trên Uviwash.</p>
+    </div>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tab-est" aria-selected="true">Ước tính</button>
+      <button role="tab" id="tab-real" aria-selected="false">Thực tế cửa hàng</button>
+    </div>
+  </header>
+
+  <div id="est-wrap" style="display:grid;gap:20px">
+  <div class="subtabs" role="tablist">
+    <button role="tab" id="tab-m" aria-selected="true">Một tháng</button>
+    <button role="tab" id="tab-y" aria-selected="false">Kế hoạch cả năm</button>
+  </div>
+
+  <!-- MONTH VIEW -->
+  <section id="view-m" style="display:grid;gap:20px">
+    <div class="panel">
+      <div class="calc">
+        <div>
+          <div class="label"><label for="rev">Doanh thu tháng</label></div>
+          <div class="rev-field"><input id="rev" inputmode="numeric" autocomplete="off" value="35.000.000"><span>đ</span></div>
+          <div class="chips" id="chips"></div>
+          <p class="hint">Gõ số tiền đầy đủ, hoặc gõ tắt như <b>45tr</b> hay <b>45m</b>.</p>
+        </div>
+        <div class="verdict" id="verdict">
+          <span class="pill" id="v-pill">Có lãi</span>
+          <div class="label" style="margin-top:6px">Lợi nhuận ước tính (trước thuế)</div>
+          <div class="profit" id="v-profit">0 đ</div>
+          <div class="sub" id="v-margin"></div>
+          <div class="sub" id="v-be"></div>
+        </div>
+      </div>
+      <div class="split">
+        <div class="label">Doanh thu được chia thành</div>
+        <div class="bar" aria-hidden="true"><i id="b-f" style="background:var(--fixed)"></i><i id="b-v" style="background:var(--var)"></i><i id="b-p" style="background:var(--gain)"></i></div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="label" style="margin-bottom:4px">Chi tiết chi phí tháng</div>
+      <table class="ledger" id="ledger"></table>
+      <p class="removed">Đã bỏ so với bảng kế hoạch gốc: ca sáng, ca tối, hoa quả thắp hương, chi phí marketing. Tiền thuê 14tr đã đổi thành 10tr.</p>
+    </div>
+  </section>
+
+  <!-- YEAR VIEW -->
+  <section id="view-y" hidden>
+    <div class="panel">
+      <div class="ysum" id="ysum"></div>
+      <div class="ywrap">
+        <table class="ytable" id="ytable"></table>
+      </div>
+      <div class="chart" id="ychart"></div>
+      <button class="btn-ghost" id="y-reset" type="button">Điền lại doanh thu theo bảng kế hoạch</button>
+    </div>
+  </section>
+
+  </div>
+
+  <!-- REAL DATA VIEW -->
+  <section id="view-real" hidden style="display:grid;gap:20px">
+    <div class="panel" id="real-login">
+      <div class="label">Đăng nhập tài khoản báo cáo</div>
+      <p class="hint" style="margin-top:4px">Dùng tài khoản báo cáo của laundrylnd.com để lấy doanh thu thật từ Uviwash. Số liệu chỉ hiện trên máy của anh sau khi đăng nhập.</p>
+      <form id="real-form" class="login">
+        <div class="fld"><label for="r-user">Tài khoản</label><div class="box"><input id="r-user" autocomplete="username" style="text-align:left" value="baocaolnd"></div></div>
+        <div class="fld"><label for="r-pass">Mật khẩu</label><div class="box"><input id="r-pass" type="password" autocomplete="current-password" style="text-align:left"></div></div>
+        <button class="btn-main" type="submit" id="r-go">Lấy doanh thu thực tế</button>
+      </form>
+      <p class="err" id="r-err" hidden></p>
+    </div>
+    <div class="panel" id="real-data" hidden>
+      <div class="real-top">
+        <div class="label">Doanh thu thật theo tháng (từ Uviwash)</div>
+        <div class="real-actions"><button class="btn-ghost sm" id="r-refresh" type="button">Làm mới</button><button class="btn-ghost sm" id="r-out" type="button">Đăng xuất</button></div>
+      </div>
+      <div class="ysum" id="rsum" style="margin-top:12px"></div>
+      <div class="ywrap"><table class="ytable" id="rtable"></table></div>
+      <div class="chart" id="rchart"></div>
+      <p class="hint" id="r-note"></p>
+    </div>
+  </section>
+
+  <!-- ASSUMPTIONS -->
+  <details class="panel" id="assump">
+    <summary>Giả định chi phí (bấm để chỉnh)</summary>
+    <div class="grid" id="agrid"></div>
+    <button class="btn-ghost" id="a-reset" type="button">Khôi phục giả định mặc định</button>
+  </details>
+</div>
+
+<script>
+(function(){
+const DEF = {
+  rent:10000000,
+  days:30, hours:5, wage:25000,
+  elec:5, water:1,
+  det:5, soft:2, bleach:2, nylon:1, bag:1,
+  paper:100000, net:200000, trash:50000
+};
+// Doanh thu kế hoạch theo bảng gốc: tháng 9 (khai trương) → tháng 8 năm sau
+const PLAN_MONTHS = [9,10,11,12,1,2,3,4,5,6,7,8];
+const PLAN_NOTES = {9:'Khai trương',2:'Tháng Tết'};
+const PLAN_REV = [25e6,35e6,40e6,60e6,80e6,70e6,90e6,90e6,70e6,35e6,35e6,35e6];
+const CHIPS = [20e6,25e6,35e6,50e6,70e6,90e6];
+
+const store = {
+  get(k,d){try{const v=localStorage.getItem('gk-ln-'+k);return v?JSON.parse(v):d}catch(_){return d}},
+  set(k,v){try{localStorage.setItem('gk-ln-'+k,JSON.stringify(v))}catch(_){}}
+};
+let A = Object.assign({},DEF,store.get('assump',{}));
+let rev = store.get('rev',35e6);
+let yrev = store.get('yrev',PLAN_REV.slice());
+if(!Array.isArray(yrev)||yrev.length!==12) yrev = PLAN_REV.slice();
+
+const $ = s=>document.querySelector(s);
+const fmt = n => Math.round(n).toLocaleString('vi-VN');
+const vnd = n => (n<0?'−':'')+fmt(Math.abs(n))+' đ';
+const short = n => { const a=Math.abs(n), s=n<0?'−':''; if(a>=1e9) return s+(a/1e9).toLocaleString('vi-VN',{maximumFractionDigits:2})+' tỷ'; if(a>=1e6) return s+(a/1e6).toLocaleString('vi-VN',{maximumFractionDigits:1})+'tr'; return s+fmt(a)+'đ'; };
+function parseMoney(str){
+  str=String(str).trim().toLowerCase().replace(/\s/g,'');
+  const m=str.match(/^([\d.,]+)(tr|triệu|m|k|nghìn|ngàn|tỷ|ty|b)?$/);
+  if(m&&m[2]){ const base=parseFloat(m[1].replace(/\./g,'').replace(',','.'))||0;
+    const mul={tr:1e6,'triệu':1e6,m:1e6,k:1e3,'nghìn':1e3,'ngàn':1e3,'tỷ':1e9,ty:1e9,b:1e9}[m[2]]; return Math.round(base*mul); }
+  return parseInt(str.replace(/[^\d]/g,''),10)||0;
+}
+
+// Core calculation — same structure as the planning sheet
+function calc(R){
+  const labor = A.days*A.hours*A.wage;
+  const elec = R*A.elec/100, water = R*A.water/100;
+  const mats = [['Nước giặt',A.det],['Nước xả',A.soft],['Nước tẩy',A.bleach],['Nilon & móc áo',A.nylon],['Túi giấy',A.bag]].map(([n,p])=>[n,p,R*p/100]);
+  const office = [['Giấy in, giấy lụa, ghim, đạn nhựa',A.paper],['Internet',A.net],['Vệ sinh môi trường, đổ rác',A.trash]];
+  const matT = mats.reduce((s,x)=>s+x[2],0), offT = office.reduce((s,x)=>s+x[1],0);
+  const fixed = A.rent + labor + offT;
+  const varPct = A.elec+A.water+A.det+A.soft+A.bleach+A.nylon+A.bag;
+  const variable = R*varPct/100;
+  const cost = fixed + variable;
+  return {R,labor,elec,water,mats,office,matT,offT,fixed,varPct,variable,cost,profit:R-cost,
+    be: varPct<100 ? fixed/(1-varPct/100) : Infinity};
+}
+
+/* ---------- Month view ---------- */
+const revEl = $('#rev');
+$('#chips').innerHTML = CHIPS.map(v=>`<button type="button" data-v="${v}">${short(v)}</button>`).join('');
+$('#chips').addEventListener('click',e=>{const b=e.target.closest('button'); if(!b)return; rev=+b.dataset.v; revEl.value=fmt(rev); store.set('rev',rev); renderMonth();});
+revEl.addEventListener('input',()=>{ rev=parseMoney(revEl.value); store.set('rev',rev); renderMonth(); });
+revEl.addEventListener('blur',()=>{ revEl.value = rev?fmt(rev):''; });
+revEl.value = fmt(rev);
+
+function renderMonth(){
+  const c = calc(rev);
+  const v = $('#verdict');
+  const even = Math.abs(c.profit) < 0.005*Math.max(c.R,1) || (c.R===0);
+  v.className = 'verdict ' + (c.R===0 ? 'even' : c.profit>0 ? 'gain' : c.profit<0 ? 'loss' : 'even');
+  $('#v-pill').textContent = c.R===0 ? 'Chưa nhập doanh thu' : c.profit>0 ? 'Có lãi' : c.profit<0 ? 'Đang lỗ' : 'Hòa vốn';
+  $('#v-profit').textContent = vnd(c.profit);
+  $('#v-margin').innerHTML = c.R>0 ? `Biên lợi nhuận <b>${(c.profit/c.R*100).toLocaleString('vi-VN',{maximumFractionDigits:1})}%</b> · Tổng chi phí <b>${vnd(c.cost)}</b>` : `Chi phí cố định mỗi tháng <b>${vnd(c.fixed)}</b>`;
+  $('#v-be').innerHTML = isFinite(c.be) ? `Hòa vốn khi doanh thu đạt <b>${vnd(Math.ceil(c.be/1000)*1000)}</b>/tháng` : '';
+
+  // split bar
+  const R = Math.max(c.R,1), P = Math.max(c.profit,0);
+  const tot = Math.max(c.R, c.cost);
+  $('#b-f').style.width = (c.fixed/tot*100)+'%';
+  $('#b-v').style.width = (c.variable/tot*100)+'%';
+  $('#b-p').style.width = (P/tot*100)+'%';
+  $('#legend').innerHTML =
+    `<span><i style="background:var(--fixed)"></i>Cố định ${short(c.fixed)}</span>`+
+    `<span><i style="background:var(--var)"></i>Theo doanh thu (${c.varPct}%) ${short(c.variable)}</span>`+
+    (c.profit>=0?`<span><i style="background:var(--gain)"></i>Lợi nhuận ${short(c.profit)}</span>`:`<span style="color:var(--loss)">Chi phí vượt doanh thu ${short(-c.profit)}</span>`);
+
+  const row=(a,b,cls='',tag='')=>`<tr class="${cls}"><td>${a}${tag}</td><td class="num">${b}</td></tr>`;
+  const F='<span class="tag f">cố định</span>', V='<span class="tag v">theo DT</span>';
+  let h='';
+  h+=row('Doanh thu',vnd(c.R),'grp');
+  h+=row('1. Thuê cửa hàng',vnd(A.rent),'grp','',);
+  h+=row(`2. Nhân công ca chiều<span class="note">${A.days} ngày × ${A.hours} giờ × ${fmt(A.wage)}đ</span>`,vnd(c.labor),'grp');
+  h+=row(`3. Điện nước`,vnd(c.elec+c.water),'grp');
+  h+=row(`Điện (${A.elec}% DT)`,vnd(c.elec),'item');
+  h+=row(`Nước (${A.water}% DT)`,vnd(c.water),'item');
+  h+=row('4. Nguyên vật liệu',vnd(c.matT),'grp');
+  c.mats.forEach(([n,p,x])=>h+=row(`${n} (${p}% DT)`,vnd(x),'item'));
+  h+=row('5. Chi phí văn phòng',vnd(c.offT),'grp');
+  c.office.forEach(([n,x])=>h+=row(n,vnd(x),'item'));
+  h+=row('Tổng chi phí vận hành',vnd(c.cost),'total');
+  h+=`<tr class="total"><td>Lợi nhuận ước tính</td><td class="num ${c.profit>=0?'pos':'neg'}">${vnd(c.profit)}</td></tr>`;
+  $('#ledger').innerHTML=h;
+}
+
+/* ---------- Year view ---------- */
+function renderYearTable(){
+  let h='<thead><tr><th>Tháng</th><th>Doanh thu</th><th>Chi phí</th><th>Lợi nhuận</th></tr></thead><tbody>';
+  PLAN_MONTHS.forEach((m,i)=>{
+    h+=`<tr><td class="mth">Tháng ${m}${PLAN_NOTES[m]?`<small>${PLAN_NOTES[m]}</small>`:''}</td>
+      <td><input class="num" id="y${i}" data-i="${i}" inputmode="numeric" value="${fmt(yrev[i])}" aria-label="Doanh thu tháng ${m}"></td>
+      <td class="num" id="yc${i}"></td><td class="num" id="yp${i}"></td></tr>`;
+  });
+  h+='</tbody><tfoot><tr><td>Cả năm</td><td class="num" id="yR"></td><td class="num" id="yC"></td><td class="num" id="yP"></td></tr></tfoot>';
+  $('#ytable').innerHTML=h;
+}
+$('#ytable').addEventListener('input',e=>{const el=e.target; if(el.dataset.i==null)return; yrev[+el.dataset.i]=parseMoney(el.value); store.set('yrev',yrev); renderYearNums();});
+$('#ytable').addEventListener('focusout',e=>{const el=e.target; if(el.dataset.i==null)return; el.value=fmt(yrev[+el.dataset.i]);});
+$('#y-reset').addEventListener('click',()=>{yrev=PLAN_REV.slice(); store.set('yrev',yrev); renderYearTable(); renderYearNums();});
+
+function renderYearNums(){
+  let R=0,C=0,P=0,loss=0,best=null;
+  const ps=[];
+  PLAN_MONTHS.forEach((m,i)=>{const c=calc(yrev[i]); R+=c.R;C+=c.cost;P+=c.profit; ps.push(c.profit); if(c.profit<0)loss++;
+    if(!best||c.profit>best.p)best={m,p:c.profit};
+    $('#yc'+i).textContent=fmt(c.cost); const pe=$('#yp'+i); pe.textContent=(c.profit<0?'−':'')+fmt(Math.abs(c.profit)); pe.className='num '+(c.profit>=0?'pos':'neg');});
+  $('#yR').textContent=fmt(R); $('#yC').textContent=fmt(C);
+  const yp=$('#yP'); yp.textContent=(P<0?'−':'')+fmt(Math.abs(P)); yp.className='num '+(P>=0?'pos':'neg');
+  $('#ysum').innerHTML=
+    `<div><span class="label">Lợi nhuận cả năm</span><b class="${P>=0?'pos':'neg'}">${vnd(P)}</b></div>`+
+    `<div><span class="label">Trung bình / tháng</span><b>${vnd(P/12)}</b></div>`+
+    `<div><span class="label">Tháng lỗ</span><b>${loss} / 12</b></div>`;
+  drawChart(ps);
+}
+function drawChart(ps){
+  $('#ychart').innerHTML='<div class="label" style="margin-bottom:6px">Lợi nhuận từng tháng</div>'+barSvg(ps,PLAN_MONTHS.map(m=>'T'+m));
+}
+function barSvg(ps,labels){
+  const W=760,H=220,pl=56,pr=10,pt=14,pb=30;
+  const mx=Math.max(0,...ps), mn=Math.min(0,...ps);
+  const step = niceStep((mx-mn)||1e6);
+  const top=Math.ceil(mx/step)*step || step, bot=Math.floor(mn/step)*step;
+  const y=v=>pt+(top-v)/(top-bot)*(H-pt-pb);
+  const bw=(W-pl-pr)/Math.max(ps.length,1);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Lợi nhuận theo tháng">`;
+  for(let v=bot; v<=top+1; v+=step){ s+=`<line x1="${pl}" x2="${W-pr}" y1="${y(v)}" y2="${y(v)}" stroke="var(--line)" stroke-width="${v===0?1.5:1}"/>`;
+    s+=`<text x="${pl-8}" y="${y(v)+4}" text-anchor="end" font-size="11" fill="var(--muted)" font-family="var(--f-num)">${short(v)}</text>`; }
+  ps.forEach((p,i)=>{const x=pl+i*bw+bw*.18, w=bw*.64, y0=y(0), y1=y(p);
+    s+=`<rect x="${x}" y="${Math.min(y0,y1)}" width="${w}" height="${Math.max(1,Math.abs(y1-y0))}" rx="3" fill="${p>=0?'var(--gain)':'var(--loss)'}"/>`;
+    s+=`<text x="${x+w/2}" y="${H-10}" text-anchor="middle" font-size="11" fill="var(--muted)" font-family="var(--f-ui)">${labels[i]}</text>`;});
+  return s+'</svg>';
+}
+function niceStep(range){const raw=range/4, p=Math.pow(10,Math.floor(Math.log10(raw))), f=raw/p; return (f<=1?1:f<=2?2:f<=5?5:10)*p;}
+
+/* ---------- Assumptions ---------- */
+const FIELDS=[
+  ['Mặt bằng & nhân công'],
+  ['rent','Tiền thuê mặt bằng','đ/tháng',true],
+  ['days','Số ngày làm ca chiều','ngày/tháng'],
+  ['hours','Số giờ một ca','giờ'],
+  ['wage','Lương theo giờ','đ/giờ',true],
+  ['Điện nước (% doanh thu)'],
+  ['elec','Điện','%'],['water','Nước','%'],
+  ['Nguyên vật liệu (% doanh thu)'],
+  ['det','Nước giặt','%'],['soft','Nước xả','%'],['bleach','Nước tẩy','%'],['nylon','Nilon & móc áo','%'],['bag','Túi giấy','%'],
+  ['Văn phòng (cố định)'],
+  ['paper','Giấy in, giấy lụa, ghim, đạn nhựa','đ/tháng',true],['net','Internet','đ/tháng',true],['trash','Vệ sinh môi trường, đổ rác','đ/tháng',true]
+];
+function renderAssump(){
+  $('#agrid').innerHTML=FIELDS.map(f=>f.length===1?`<div class="sec-t">${f[0]}</div>`:
+    `<div class="fld"><label for="a-${f[0]}">${f[1]}</label><div class="box"><input id="a-${f[0]}" data-k="${f[0]}" data-m="${f[3]?1:0}" inputmode="decimal" value="${f[3]?fmt(A[f[0]]):A[f[0]]}"><span class="u">${f[2]}</span></div></div>`).join('');
+}
+$('#agrid').addEventListener('input',e=>{const el=e.target,k=el.dataset.k; if(!k)return;
+  A[k] = el.dataset.m==='1' ? parseMoney(el.value) : (parseFloat(el.value.replace(',','.'))||0);
+  store.set('assump',A); renderMonth(); renderYearNums(); renderReal();});
+$('#agrid').addEventListener('focusout',e=>{const el=e.target,k=el.dataset.k; if(k&&el.dataset.m==='1') el.value=fmt(A[k]);});
+$('#a-reset').addEventListener('click',()=>{A=Object.assign({},DEF); store.set('assump',A); renderAssump(); renderMonth(); renderYearNums(); renderReal();});
+
+/* ---------- Tabs ---------- */
+function show(t){ const y=t==='y'; $('#tab-m').setAttribute('aria-selected',!y); $('#tab-y').setAttribute('aria-selected',y);
+  $('#view-m').hidden=y; $('#view-y').hidden=!y; store.set('tab',t); }
+$('#tab-m').addEventListener('click',()=>show('m')); $('#tab-y').addEventListener('click',()=>show('y'));
+function part(t){ const r=t==='real'; $('#tab-est').setAttribute('aria-selected',!r); $('#tab-real').setAttribute('aria-selected',r);
+  $('#est-wrap').hidden=r; $('#view-real').hidden=!r; store.set('part',t); if(r) realInit(); }
+$('#tab-est').addEventListener('click',()=>part('est')); $('#tab-real').addEventListener('click',()=>part('real'));
+
+/* ---------- Real data from laundrylnd.com ---------- */
+const API='https://laundrylnd.com';
+const ss={get(k){try{return sessionStorage.getItem('gk-ln-'+k)||''}catch(_){return ''}},set(k,v){try{v?sessionStorage.setItem('gk-ln-'+k,v):sessionStorage.removeItem('gk-ln-'+k)}catch(_){}}};
+let realMonths=null, realMeta=null, realBusy=false;
+async function post(path,body){
+  const r=await fetch(API+path,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(body)});
+  let j={}; try{j=await r.json()}catch(_){}
+  if(!r.ok||!j.ok){const e=new Error(j.error||('Máy chủ trả lỗi '+r.status)); e.status=r.status; throw e;}
+  return j;
+}
+function realErr(msg){const e=$('#r-err'); e.textContent=msg; e.hidden=!msg;}
+async function realLoad(){
+  const tok=ss.get('tok'); if(!tok){ $('#real-login').hidden=false; $('#real-data').hidden=true; return; }
+  realBusy=true; $('#r-refresh').disabled=true;
+  try{ const j=await post('/api/report/doanh-thu',{token:tok}); realMonths=j.months||[]; realMeta=j;
+    $('#real-login').hidden=true; $('#real-data').hidden=false; renderReal(); }
+  catch(e){ if(e.status===401){ ss.set('tok',''); $('#real-login').hidden=false; $('#real-data').hidden=true; realErr('Phiên đăng nhập đã hết, anh đăng nhập lại nhé.'); }
+    else { $('#real-login').hidden=false; realErr(netMsg(e)); } }
+  finally{ realBusy=false; $('#r-refresh').disabled=false; }
+}
+function netMsg(e){ return (e instanceof TypeError) ? 'Không kết nối được laundrylnd.com. Kiểm tra mạng, hoặc máy chủ ở tiệm đang tắt.' : e.message; }
+let realInited=false;
+function realInit(){ if(realInited) return; realInited=true; realLoad(); }
+$('#real-form').addEventListener('submit',async e=>{ e.preventDefault(); realErr('');
+  const btn=$('#r-go'); btn.disabled=true; btn.textContent='Đang lấy dữ liệu…';
+  try{ const j=await post('/api/admin/login',{user:$('#r-user').value.trim(),password:$('#r-pass').value});
+    ss.set('tok',j.token); $('#r-pass').value=''; await realLoad(); }
+  catch(err){ realErr(err.status===401?'Sai tài khoản hoặc mật khẩu.':netMsg(err)); }
+  finally{ btn.disabled=false; btn.textContent='Lấy doanh thu thực tế'; } });
+$('#r-refresh').addEventListener('click',realLoad);
+$('#r-out').addEventListener('click',()=>{ ss.set('tok',''); realMonths=null; $('#real-data').hidden=true; $('#real-login').hidden=false; });
+
+function renderReal(){
+  if(!realMonths) return;
+  const now=new Date(), curYm=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const ms=realMonths.slice(-12);
+  let R=0,P=0,N=0,loss=0; const ps=[], labels=[];
+  let h='<thead><tr><th>Tháng</th><th>Số đơn</th><th>Doanh thu thật</th><th>Kế hoạch</th><th>Chi phí ước tính</th><th>Lợi nhuận</th></tr></thead><tbody>';
+  ms.forEach(m=>{ const [yy,mm]=m.ym.split('-').map(Number); const c=calc(m.revenue);
+    const pi=PLAN_MONTHS.indexOf(mm), plan=pi>=0?yrev[pi]:0, d=m.revenue-plan, part=m.ym===curYm;
+    R+=m.revenue; P+=c.profit; N+=m.orders; if(c.profit<0&&!part) loss++; ps.push(c.profit); labels.push('T'+mm);
+    h+=`<tr class="${part?'partial':''}"><td class="mth">Tháng ${mm}/${yy}${part?'<small>Đang chạy, chưa hết tháng</small>':''}</td>
+      <td class="num">${fmt(m.orders)}</td><td class="num">${fmt(m.revenue)}</td>
+      <td class="num">${plan?fmt(plan):'–'}${plan?`<span class="diff ${d>=0?'pos':'neg'}">${d>=0?'+':'−'}${short(Math.abs(d))}</span>`:''}</td>
+      <td class="num">${fmt(c.cost)}</td><td class="num ${c.profit>=0?'pos':'neg'}">${(c.profit<0?'−':'')+fmt(Math.abs(c.profit))}</td></tr>`; });
+  h+=`</tbody><tfoot><tr><td>Tổng ${ms.length} tháng</td><td class="num">${fmt(N)}</td><td class="num">${fmt(R)}</td><td></td><td></td><td class="num ${P>=0?'pos':'neg'}">${(P<0?'−':'')+fmt(Math.abs(P))}</td></tr></tfoot>`;
+  $('#rtable').innerHTML = ms.length ? h : '<tbody><tr><td>Chưa có đơn nào trên Uviwash.</td></tr></tbody>';
+  const cur=ms.find(m=>m.ym===curYm);
+  $('#rsum').innerHTML=
+    `<div><span class="label">Doanh thu ${ms.length} tháng</span><b>${vnd(R)}</b></div>`+
+    `<div><span class="label">Lợi nhuận ước tính</span><b class="${P>=0?'pos':'neg'}">${vnd(P)}</b></div>`+
+    `<div><span class="label">Tháng này đến nay</span><b>${cur?vnd(cur.revenue):'0 đ'}</b></div>`;
+  $('#rchart').innerHTML = ms.length ? '<div class="label" style="margin-bottom:6px">Lợi nhuận ước tính từng tháng</div>'+barSvg(ps,labels) : '';
+  $('#r-note').textContent=`Doanh thu tính theo ngày tạo đơn trên Uviwash, cập nhật ${realMeta.updated||''}. Chi phí dùng cùng giả định ở mục bên dưới; tháng đang chạy mới tính đến hôm nay nên lợi nhuận còn thấp. Máy chủ lưu đơn của 12 tháng gần nhất.`;
+}
+
+renderAssump(); renderMonth(); renderYearTable(); renderYearNums();
+show(location.hash==='#nam' ? 'y' : store.get('tab','m'));
+part(location.hash==='#thucte' ? 'real' : store.get('part','est'));
+})();
+</script>
+</body>
+</html>
